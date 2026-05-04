@@ -1,0 +1,283 @@
+version: 2
+
+sources:
+  - name: payments_demo
+    database: modus-playground
+    schema: payments_demo
+    description: >
+      Raw payments platform dataset — 75+ tables covering AP/AR payments,
+      card acquiring, KYC/risk, subscriptions, marketing, and product
+      engagement. Generated synthetically for the Modus AI demo.
+
+    tables:
+      # ── Reference / Lookup ─────────────────────────────────────
+      - name: countries
+        description: ISO country reference with high-risk flags and payout support.
+      - name: currencies
+        description: Supported currency codes with decimal precision.
+      - name: industries
+        description: NAICS industry codes with sector, sub-sector, and typical CB rate.
+      - name: mcc_codes
+        description: Merchant category codes with risk band and typical interchange bps.
+      - name: plans
+        description: Subscription plan tiers with pricing, included payments, and overage rates.
+      - name: partnerships
+        description: Partner channels (hosted, integrated, local, direct) with short codes.
+      - name: processors
+        description: Payment processors by type — card acquirers, ACH, wire, FX.
+      - name: roles
+        description: User roles (customer-facing and internal) with permission scopes.
+      - name: feature_flags
+        description: Platform feature flags with rollout strategy and current percentage.
+      - name: bank_lookup
+        description: Bank name and routing number reference.
+
+      # ── Identity ───────────────────────────────────────────────
+      - name: organizations
+        description: Customer orgs — one row per account. Core entity for all analysis.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: account_status
+            tests:
+              - accepted_values:
+                  values: [active, past_due, suspended, churned, trial,
+                           trial_expired, kyc_stalled]
+          - name: partner_id
+            tests: [not_null]
+          - name: current_plan_id
+            tests: [not_null]
+
+      - name: users
+        description: Platform users — internal and customer-facing.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: primary_organization_id
+            tests: [not_null]
+
+      - name: user_organizations
+        description: M2M — users to organizations they belong to.
+      - name: user_roles
+        description: M2M — users to roles within an organization.
+      - name: api_keys
+        description: API keys per organization with environment and expiry.
+      - name: sessions
+        description: User sessions with device, browser, and duration.
+      - name: login_attempts
+        description: All login attempts including failures and MFA events.
+
+      # ── Counterparties ─────────────────────────────────────────
+      - name: counterparties
+        description: Customer-scoped vendor/buyer records.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: organization_id
+            tests: [not_null]
+      - name: counterparty_addresses
+      - name: counterparty_bank_accounts
+      - name: counterparty_payment_preferences
+      - name: registry_counterparties
+        description: >
+          Cross-customer vendor registry — one canonical record per real-world
+          vendor, shared across all platform customers. Foundation for the
+          network flywheel story (#17) and upsell funnel (#1).
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: counterparty_registry_mapping
+        description: M2M — links customer-scoped counterparties to the registry.
+
+      # ── Bills & Invoices ───────────────────────────────────────
+      - name: bills
+        description: AP vendor bills with status, source (OCR/manual/API), and amount.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: organization_id
+            tests: [not_null]
+          - name: status
+            tests:
+              - accepted_values:
+                  values: [received, pending_approval, approved, scheduled,
+                           paid, voided, disputed]
+      - name: bill_lines
+      - name: bill_approval_workflows
+      - name: bill_approvals
+      - name: invoices
+        description: AR invoices with send status, due dates, and collection status.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: status
+            tests:
+              - accepted_values:
+                  values: [draft, sent, viewed, paid, overdue, voided, write_off]
+      - name: invoice_lines
+      - name: invoice_card_payment_links
+      - name: ocr_extractions
+        description: >
+          OCR extraction results per bill. The acme_erp_v3 template has a known
+          ~14% mis-extraction rate (story #16). had_extraction_error is the
+          primary signal.
+
+      # ── Payments ───────────────────────────────────────────────
+      - name: payment_methods
+        description: Funding methods per org (bank accounts, credit/debit cards).
+      - name: delivery_methods
+        description: >
+          Per-counterparty delivery rails (ACH, wire, instant, FX, check).
+          Decoupled from payment_methods — Melio-style.
+      - name: payments
+        description: >
+          Central payment fact table — AP (outbound) and AR (inbound).
+          Includes platform and third-party fees, risk flags, and
+          sanctions_screening_id for large payments.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: status
+            tests:
+              - accepted_values:
+                  values: [scheduled, initiated, processing, completed,
+                           failed, canceled, returned, refunded]
+          - name: direction
+            tests:
+              - accepted_values:
+                  values: [outbound, inbound]
+          - name: amount_usd
+            tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 0
+                  strictly: true
+      - name: bill_payments
+      - name: invoice_payments
+      - name: payment_attempts
+      - name: payment_status_history
+      - name: fx_rates
+      - name: fx_conversions
+      - name: ach_returns
+        description: ACH return events with R-codes (NSF, closed account, etc.).
+
+      # ── Card Acquiring ─────────────────────────────────────────
+      - name: card_transactions
+        description: >
+          Card sales, refunds, voids, and auths. Includes interchange_amount,
+          interchange_rate_bps, and processor_id. Helios Acquiring carries
+          10-35 bps above baseline (story #10).
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: transaction_type
+            tests:
+              - accepted_values:
+                  values: [sale, refund, void, auth, capture]
+          - name: outcome
+            tests:
+              - accepted_values:
+                  values: [approved, declined]
+      - name: chargebacks
+        description: Chargeback disputes per card transaction. Subscription Box industry ramps (story #3).
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: dispute_cases
+        description: Internal dispute handling with SLA tracking. Q1 2026 breach window (story).
+      - name: dispute_evidence
+
+      # ── Risk & Compliance ──────────────────────────────────────
+      - name: kyc_kyb_checks
+        description: KYC/KYB verification runs per org (one per attempt).
+      - name: kyc_kyb_check_steps
+        description: >
+          Granular step records (personal_details, company_details,
+          legal_details, industry). legal_details pass rate ~62% — the
+          funnel cliff (story #4).
+      - name: fraud_scores
+        description: Model scores per card_transaction, payment, or login attempt.
+      - name: fraud_review_queue
+      - name: fraud_decisions
+      - name: sanctions_screenings
+        description: >
+          AML/PEP screenings per org, counterparty, and large payment.
+          v2026.03 list version has 22% false-positive rate vs 3% baseline
+          (story #9).
+        columns:
+          - name: outcome
+            tests:
+              - accepted_values:
+                  values: [clear, potential_match, confirmed_match]
+      - name: risk_events
+
+      # ── Operations ─────────────────────────────────────────────
+      - name: support_tickets
+        description: Customer support tickets. OCR spike in Aug 2025 (story #8).
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: support_ticket_messages
+      - name: csm_assignments
+      - name: csm_activities
+
+      # ── Internal Finance ───────────────────────────────────────
+      - name: plan_features
+      - name: subscriptions
+        description: >
+          Customer subscriptions with MRR, ARR, and lifecycle.
+          upgraded_from_subscription_id links growth → growth_2025
+          migrations (story #7).
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: status
+            tests:
+              - accepted_values:
+                  values: [trialing, active, past_due, paused, canceled]
+      - name: subscription_usage
+        description: >
+          Monthly usage rollups per subscription. Legacy_2023 orgs show
+          overage_amount_usd = 0 despite high volumes (story #11).
+      - name: platform_invoices
+      - name: platform_invoice_lines
+      - name: revenue_recognition
+        description: ASC 606 revenue recognition entries by category and GL account.
+      - name: cogs_entries
+        description: >
+          Per-event COGS: interchange, processor fees, chargeback losses,
+          ACH return fees. Interchange is the primary variable cost.
+
+      - name: customer_health_scores
+        description: >
+          Weekly snapshots per org. login_count_30d declines ~14 days before
+          churn (story #13). primary_risk_signal = 'sleeping' flags story #15.
+
+      # ── Marketing ──────────────────────────────────────────────
+      - name: marketing_campaigns
+        description: >
+          38 campaigns. Campaign id 310000017 (LinkedIn Q4 2024 Manufacturing)
+          is the bad-fit cohort anchor (story #14).
+      - name: campaign_attributions
+      - name: emails
+      - name: email_events
+
+      # ── Product Engagement ─────────────────────────────────────
+      - name: releases
+        description: >
+          Product releases. v4.18 (id=520000018) has has_breaking_changes_documented=false
+          but the OCR change is mentioned in the internal release note (story #8).
+      - name: release_notes
+      - name: feature_flag_assignments
+      - name: ui_events
+        description: >
+          15M event stream. row_type distinguishes: authenticated_session,
+          anonymous_landing, onboarding, upsell_page.
+      - name: page_views
+      - name: page_errors
+        description: >
+          JS and render errors. anonymous_upsell rows (APEX/ZENITH partners,
+          first-time visitors) are the story #1 signal.
+
+      # ── Audit ──────────────────────────────────────────────────
+      - name: audit_log
+        description: Sampled audit trail across approvals, reviews, and lifecycle events.
