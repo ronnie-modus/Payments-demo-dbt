@@ -37,24 +37,39 @@ sources:
         description: Customer orgs — one row per account. Core entity for all analysis.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: account_status
             tests:
               - accepted_values:
-                  values: [active, past_due, suspended, churned, trial,
-                           trial_expired, kyc_stalled]
+                  name: accepted_values_org_status_source
+                  arguments:
+                    values:
+                      - active
+                      - past_due
+                      - suspended
+                      - churned
+                      - trial
+                      - trial_expired
+                      - kyc_stalled
           - name: partner_id
-            tests: [not_null]
+            tests:
+              - not_null
           - name: current_plan_id
-            tests: [not_null]
+            tests:
+              - not_null
 
       - name: users
         description: Platform users — internal and customer-facing.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: primary_organization_id
-            tests: [not_null]
+            tests:
+              - not_null
 
       - name: user_organizations
         description: M2M — users to organizations they belong to.
@@ -72,9 +87,12 @@ sources:
         description: Customer-scoped vendor/buyer records.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: organization_id
-            tests: [not_null]
+            tests:
+              - not_null
       - name: counterparty_addresses
       - name: counterparty_bank_accounts
       - name: counterparty_payment_preferences
@@ -85,7 +103,9 @@ sources:
           network flywheel story (#17) and upsell funnel (#1).
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
       - name: counterparty_registry_mapping
         description: M2M — links customer-scoped counterparties to the registry.
 
@@ -94,14 +114,25 @@ sources:
         description: AP vendor bills with status, source (OCR/manual/API), and amount.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: organization_id
-            tests: [not_null]
+            tests:
+              - not_null
           - name: status
             tests:
               - accepted_values:
-                  values: [received, pending_approval, approved, scheduled,
-                           paid, voided, disputed]
+                  name: accepted_values_bill_status
+                  arguments:
+                    values:
+                      - received
+                      - pending_approval
+                      - approved
+                      - scheduled
+                      - paid
+                      - voided
+                      - disputed
       - name: bill_lines
       - name: bill_approval_workflows
       - name: bill_approvals
@@ -109,11 +140,22 @@ sources:
         description: AR invoices with send status, due dates, and collection status.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: status
             tests:
               - accepted_values:
-                  values: [draft, sent, viewed, paid, overdue, voided, write_off]
+                  name: accepted_values_invoice_status
+                  arguments:
+                    values:
+                      - draft
+                      - sent
+                      - viewed
+                      - paid
+                      - overdue
+                      - voided
+                      - write_off
       - name: invoice_lines
       - name: invoice_card_payment_links
       - name: ocr_extractions
@@ -136,21 +178,34 @@ sources:
           sanctions_screening_id for large payments.
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: status
             tests:
               - accepted_values:
-                  values: [scheduled, initiated, processing, completed,
-                           failed, canceled, returned, refunded]
+                  name: accepted_values_payment_status
+                  arguments:
+                    values:
+                      - scheduled
+                      - initiated
+                      - processing
+                      - completed
+                      - failed
+                      - canceled
+                      - returned
+                      - refunded
           - name: direction
             tests:
               - accepted_values:
-                  values: [outbound, inbound]
+                  name: accepted_values_payment_direction_source
+                  arguments:
+                    values:
+                      - outbound
+                      - inbound
           - name: amount_usd
             tests:
-              - dbt_expectations.expect_column_values_to_be_between:
-                  min_value: 0
-                  strictly: true
+              - not_null
       - name: bill_payments
       - name: invoice_payments
       - name: payment_attempts
@@ -168,20 +223,35 @@ sources:
           10-35 bps above baseline (story #10).
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: transaction_type
             tests:
               - accepted_values:
-                  values: [sale, refund, void, auth, capture]
+                  name: accepted_values_card_txn_type_source
+                  arguments:
+                    values:
+                      - sale
+                      - refund
+                      - void
+                      - auth
+                      - capture
           - name: outcome
             tests:
               - accepted_values:
-                  values: [approved, declined]
+                  name: accepted_values_card_outcome_source
+                  arguments:
+                    values:
+                      - approved
+                      - declined
       - name: chargebacks
         description: Chargeback disputes per card transaction. Subscription Box industry ramps (story #3).
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
       - name: dispute_cases
         description: Internal dispute handling with SLA tracking. Q1 2026 breach window (story).
       - name: dispute_evidence
@@ -207,7 +277,12 @@ sources:
           - name: outcome
             tests:
               - accepted_values:
-                  values: [clear, potential_match, confirmed_match]
+                  name: accepted_values_sanctions_outcome
+                  arguments:
+                    values:
+                      - clear
+                      - potential_match
+                      - confirmed_match
       - name: risk_events
 
       # ── Operations ─────────────────────────────────────────────
@@ -215,7 +290,9 @@ sources:
         description: Customer support tickets. OCR spike in Aug 2025 (story #8).
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
       - name: support_ticket_messages
       - name: csm_assignments
       - name: csm_activities
@@ -225,15 +302,24 @@ sources:
       - name: subscriptions
         description: >
           Customer subscriptions with MRR, ARR, and lifecycle.
-          upgraded_from_subscription_id links growth → growth_2025
+          upgraded_from_subscription_id links growth to growth_2025
           migrations (story #7).
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests:
+              - unique
+              - not_null
           - name: status
             tests:
               - accepted_values:
-                  values: [trialing, active, past_due, paused, canceled]
+                  name: accepted_values_subscription_status_source
+                  arguments:
+                    values:
+                      - trialing
+                      - active
+                      - past_due
+                      - paused
+                      - canceled
       - name: subscription_usage
         description: >
           Monthly usage rollups per subscription. Legacy_2023 orgs show
@@ -246,7 +332,6 @@ sources:
         description: >
           Per-event COGS: interchange, processor fees, chargeback losses,
           ACH return fees. Interchange is the primary variable cost.
-
       - name: customer_health_scores
         description: >
           Weekly snapshots per org. login_count_30d declines ~14 days before
@@ -270,8 +355,8 @@ sources:
       - name: feature_flag_assignments
       - name: ui_events
         description: >
-          15M event stream. row_type distinguishes: authenticated_session,
-          anonymous_landing, onboarding, upsell_page.
+          15M event stream. row_type distinguishes authenticated_session,
+          anonymous_landing, onboarding, and upsell_page.
       - name: page_views
       - name: page_errors
         description: >

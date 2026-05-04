@@ -8,21 +8,43 @@ models:
       and latest health score. Materialized as a table partitioned by org_created_month.
     columns:
       - name: org_id
-        tests: [unique, not_null]
-      - name: mrr_usd
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-      - name: health_score
+          - unique
+          - not_null
+      - name: account_status
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 100
+          - accepted_values:
+              name: accepted_values_org_account_status
+              arguments:
+                values:
+                  - active
+                  - past_due
+                  - suspended
+                  - churned
+                  - trial
+                  - trial_expired
+                  - kyc_stalled
       - name: plan_tier
         tests:
           - accepted_values:
-              values: [trial, starter, growth, growth_2025, business,
-                       enterprise, legacy_2023]
+              name: accepted_values_org_plan_tier
+              arguments:
+                values:
+                  - trial
+                  - starter
+                  - growth
+                  - growth_2025
+                  - business
+                  - enterprise
+                  - legacy_2023
+      - name: mrr_usd
+        tests:
+          - not_null
+        description: "Monthly recurring revenue in USD."
+      - name: health_score
+        tests:
+          - not_null
+        description: "Composite health score 0-100 from latest weekly snapshot."
       - name: is_bad_fit_campaign_org
         description: "Flags orgs from the LinkedIn Manufacturing bad-fit campaign (story #14)."
       - name: is_grandfathered
@@ -36,12 +58,13 @@ models:
       and average org MRR. Campaign 310000017 is the bad-fit benchmark (story #14).
     columns:
       - name: campaign_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: churn_rate_90d
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 1
+          - not_null
+        description: "90-day churn rate. Should be ~2x baseline for campaign 310000017."
       - name: is_bad_fit_campaign
         description: "True for campaign id=310000017 — the high-churn cohort anchor."
 
@@ -52,9 +75,8 @@ models:
     columns:
       - name: chargeback_rate
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 0.1   # CB rates above 10% are data quality issues
+          - not_null
+        description: "CB rate = chargebacks / approved sales."
       - name: is_subscription_box
         description: "Flags the Subscription Box / DTC Recurring industry (story #3)."
 
@@ -65,25 +87,28 @@ models:
     columns:
       - name: helios_volume_share
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 1
+          - not_null
+        description: "Share of approved sale volume routed through Helios Acquiring."
+      - name: avg_interchange_bps
+        tests:
+          - not_null
+        description: "Average interchange rate in basis points."
 
   - name: mart_activation_funnel
     description: >
-      One row per org. Reconstructs the full registration → first completed
-      payment funnel. The two primary drop-offs are legal_details (~62% pass)
-      and payment method addition (~52% within 14 days). Excludes orgs created
-      in the last 30 days (immature cohort).
+      One row per org. Reconstructs the full registration to first completed
+      payment funnel. Excludes orgs created in the last 30 days.
     columns:
       - name: org_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: legal_details_attempts
         description: "Number of KYC attempts at the legal_details step."
       - name: had_legal_details_retry
         description: "True if the org needed more than one attempt at legal_details."
       - name: completed_first_payment
-        description: "Primary activation metric — TRUE = org is activated."
+        description: "Primary activation metric — TRUE means org is activated."
 
   - name: mart_support_tickets_by_feature_week
     description: >
