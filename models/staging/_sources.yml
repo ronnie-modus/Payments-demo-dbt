@@ -34,7 +34,8 @@ sources:
             tests:
               - name: accepted_values_org_status_source
                 test_name: accepted_values
-                severity: warn
+                config:
+                  severity: warn
                 arguments:
                   values:
                     - active
@@ -103,7 +104,8 @@ sources:
             tests:
               - name: accepted_values_bill_status
                 test_name: accepted_values
-                severity: warn
+                config:
+                  severity: warn
                 arguments:
                   values:
                     - received
@@ -131,7 +133,8 @@ sources:
             tests:
               - name: accepted_values_invoice_status
                 test_name: accepted_values
-                severity: warn
+                config:
+                  severity: warn
                 arguments:
                   values:
                     - draft
@@ -162,7 +165,8 @@ sources:
             tests:
               - name: accepted_values_payment_status
                 test_name: accepted_values
-                severity: warn
+                config:
+                  severity: warn
                 arguments:
                   values:
                     - scheduled
@@ -273,7 +277,8 @@ sources:
             tests:
               - name: accepted_values_subscription_status_source
                 test_name: accepted_values
-                severity: warn
+                config:
+                  severity: warn
                 arguments:
                   values:
                     - trialing
