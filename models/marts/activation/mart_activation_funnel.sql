@@ -20,9 +20,7 @@ with orgs as (
         org_created_at,
         activated_at
     from {{ ref('mart_org_summary') }}
-    where is_customer_org
-      -- Exclude immature cohort
-      and date(org_created_at) <= date_sub(current_date(), interval 30 day)
+    where date(org_created_at) <= date_sub(current_date(), interval 30 day)
 ),
 
 kyc_results as (
