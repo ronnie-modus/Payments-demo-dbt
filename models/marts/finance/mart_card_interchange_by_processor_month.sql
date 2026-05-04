@@ -7,6 +7,7 @@
 }}
 
 select
+    {{ dbt_utils.generate_surrogate_key(['ct.txn_month', 'pr.name', 'mcc.category', 'p.tier', 'pt.partner_short_code']) }} AS processor_month_key,
     ct.txn_month,
     pr.name                                 as processor_name,
     pr.processor_type,
@@ -44,4 +45,4 @@ join {{ source('payments_demo', 'organizations') }}      o   on ct.org_id       
 left join {{ source('payments_demo', 'plans') }}         p   on o.current_plan_id = p.id
 left join {{ source('payments_demo', 'partnerships') }}  pt  on o.partner_id      = pt.id
 where ct.is_sale
-group by 1, 2, 3, 4, 5, 6, 7
+group by 1, 2, 3, 4, 5, 6, 7, 8
