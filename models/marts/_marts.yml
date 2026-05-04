@@ -59,7 +59,7 @@ models:
       - name: is_sleeping
         description: "True when primary_risk_signal = 'sleeping' on latest health score (story #15)."
 
-    semantic_models:
+    semantic_model:
       - name: organizations
         description: "Customer organizations — one row per account."
         defaults:
@@ -128,7 +128,7 @@ models:
       - name: is_bad_fit_campaign
         description: "True for campaign id=310000017 — the high-churn cohort anchor."
 
-    semantic_models:
+    semantic_model:
       - name: campaigns
         description: "Marketing campaigns with cohort churn metrics."
         defaults:
@@ -181,7 +181,7 @@ models:
       - name: is_subscription_box
         description: "Flags the Subscription Box / DTC Recurring industry (story #3)."
 
-    semantic_models:
+    semantic_model:
       - name: chargebacks
         description: "Monthly chargeback rates by industry."
         defaults:
@@ -229,7 +229,7 @@ models:
           - not_null
         description: "Average interchange rate in basis points."
 
-    semantic_models:
+    semantic_model:
       - name: card_interchange
         description: "Monthly card interchange costs and volume by processor."
         defaults:
@@ -294,7 +294,7 @@ models:
       - name: linked_to_v418
         description: "Count of tickets directly linked to release 520000018."
 
-    semantic_models:
+    semantic_model:
       - name: support_tickets
         description: "Weekly support ticket volume by feature area."
         defaults:
