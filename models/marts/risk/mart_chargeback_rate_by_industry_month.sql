@@ -35,6 +35,7 @@ monthly_cbs as (
 )
 
 select
+    {{ dbt_utils.generate_surrogate_key(['ms.industry_name', 'ms.txn_month']) }} AS industry_month_key,
     ms.txn_month,
     ms.industry_name,
     ms.sector,

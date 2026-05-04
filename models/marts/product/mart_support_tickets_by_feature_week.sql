@@ -7,6 +7,7 @@
 }}
 
 select
+    {{ dbt_utils.generate_surrogate_key(['st.ticket_week', 'st.feature_area', 'st.category', 'st.sub_category', 'st.priority', 'st.channel']) }} AS feature_week_key,
     st.ticket_week,
     st.feature_area,
     st.category,
@@ -36,4 +37,4 @@ select
                                             as in_spike_window
 
 from {{ ref('stg_support_tickets') }}       st
-group by 1, 2, 3, 4, 5, 6
+group by 1, 2, 3, 4, 5, 6, 7
