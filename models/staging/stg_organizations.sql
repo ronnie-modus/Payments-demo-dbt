@@ -15,10 +15,9 @@ renamed as (
         signup_source,
         signup_campaign_id,
         city,
-        state,
+        state_or_region,
         default_currency_code,
         nps_score_latest,
-        landing_visitor_id,
         churn_reason,
         internal_notes,
 
