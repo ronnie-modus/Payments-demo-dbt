@@ -15,7 +15,8 @@ models:
         tests:
           - name: accepted_values_org_account_status
             test_name: accepted_values
-            severity: warn
+            config:
+              severity: warn
             arguments:
               values:
                 - active
@@ -29,7 +30,8 @@ models:
         tests:
           - name: accepted_values_org_plan_tier
             test_name: accepted_values
-            severity: warn
+            config:
+              severity: warn
             arguments:
               values:
                 - trial
@@ -47,7 +49,8 @@ models:
         tests:
           - name: not_null_health_score
             test_name: not_null
-            severity: warn
+            config:
+              severity: warn
         description: "Composite health score 0-100. Null for orgs with no health snapshots yet."
       - name: is_bad_fit_campaign_org
         description: "Flags orgs from the LinkedIn Manufacturing bad-fit campaign (story #14)."
@@ -69,7 +72,8 @@ models:
         tests:
           - name: not_null_churn_rate
             test_name: not_null
-            severity: warn
+            config:
+              severity: warn
         description: "90-day churn rate. Should be ~2x baseline for campaign 310000017."
       - name: is_bad_fit_campaign
         description: "True for campaign id=310000017 — the high-churn cohort anchor."
