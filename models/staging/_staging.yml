@@ -1,0 +1,126 @@
+version: 2
+
+models:
+  - name: stg_organizations
+    description: Cleaned organization records. Excludes internal platform org.
+    columns:
+      - name: org_id
+        tests: [unique, not_null]
+      - name: account_status
+        tests:
+          - accepted_values:
+              values: [active, past_due, suspended, churned, trial,
+                       trial_expired, kyc_stalled]
+      - name: is_customer_org
+        description: True for all orgs except the [Internal] platform org.
+      - name: is_bad_fit_campaign_org
+        description: "True if org was acquired via campaign id 310000017 (story #14)."
+
+  - name: stg_payments
+    description: Enriched payment records with derived flags and date helpers.
+    columns:
+      - name: payment_id
+        tests: [unique, not_null]
+      - name: direction
+        tests:
+          - accepted_values:
+              values: [outbound, inbound]
+      - name: amount_usd
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: true
+      - name: gross_profit_usd
+        description: platform_fee_amount minus third_party_fee_amount.
+
+  - name: stg_card_transactions
+    description: Card transaction records with interchange and risk fields.
+    columns:
+      - name: card_transaction_id
+        tests: [unique, not_null]
+      - name: transaction_type
+        tests:
+          - accepted_values:
+              values: [sale, refund, void, auth, capture]
+      - name: is_q4
+        description: "True for November and December transactions (story #2)."
+
+  - name: stg_subscriptions
+    description: Subscription lifecycle with MRR and migration flags.
+    columns:
+      - name: subscription_id
+        tests: [unique, not_null]
+      - name: is_migrated
+        description: "True if upgraded_from_subscription_id is set (story #7)."
+      - name: is_grandfathered
+        description: "True for legacy_2023 orgs with unlimited usage (story #11)."
+      - name: mrr_usd
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: stg_chargebacks
+    description: Chargeback records with financial outcome flags.
+    columns:
+      - name: chargeback_id
+        tests: [unique, not_null]
+      - name: reason_category
+        tests:
+          - accepted_values:
+              values: [fraud, consumer_dispute, authorization, processing_error]
+
+  - name: stg_kyc_check_steps
+    description: "KYC step records with pass/fail flags and step ordering."
+    columns:
+      - name: step_id
+        tests: [unique, not_null]
+      - name: step_name
+        tests:
+          - accepted_values:
+              values: [personal_details, company_details, legal_details, industry]
+      - name: is_legal_details_step
+        description: "True for the legal_details step — the funnel cliff (story #4)."
+
+  - name: stg_support_tickets
+    description: Support tickets with feature area, SLA, and spike window flags.
+    columns:
+      - name: ticket_id
+        tests: [unique, not_null]
+      - name: is_v418_spike_ticket
+        description: "True for OCR tickets in the Aug 15-25 2025 spike window (story #8)."
+      - name: sentiment
+        tests:
+          - accepted_values:
+              values: [positive, neutral, negative]
+
+  - name: stg_sanctions_screenings
+    description: "Sanctions screening outcomes with false-positive and delay flags."
+    columns:
+      - name: screening_id
+        tests: [unique, not_null]
+      - name: is_problematic_list_version
+        description: "True for v2026.03 which has 22% false-positive rate (story #9)."
+
+  - name: stg_customer_health_scores
+    description: "Weekly health snapshots per org with churn risk and sleeping flags."
+    columns:
+      - name: health_score_id
+        tests: [unique, not_null]
+      - name: health_score
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: churn_risk_score
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+
+  - name: stg_marketing_campaigns
+    description: Marketing campaigns with churn rate and bad-fit flag.
+    columns:
+      - name: campaign_id
+        tests: [unique, not_null]
+      - name: is_bad_fit_campaign
+        description: "True for id=310000017 — LinkedIn Q4 2024 Manufacturing (story #14)."
