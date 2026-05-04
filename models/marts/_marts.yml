@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: mart_org_summary
+    description: >
+      One row per customer org. Primary entity table used by all 6 skills.
+      Joins organizations, plans, partnerships, industries, latest subscription,
+      and latest health score. Materialized as a table partitioned by org_created_month.
+    columns:
+      - name: org_id
+        tests: [unique, not_null]
+      - name: mrr_usd
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: health_score
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: plan_tier
+        tests:
+          - accepted_values:
+              values: [trial, starter, growth, growth_2025, business,
+                       enterprise, legacy_2023]
+      - name: is_bad_fit_campaign_org
+        description: "Flags orgs from the LinkedIn Manufacturing bad-fit campaign (story #14)."
+      - name: is_grandfathered
+        description: "True for legacy_2023 orgs with unlimited_usage (story #11)."
+      - name: is_sleeping
+        description: "True when primary_risk_signal = 'sleeping' on latest health score (story #15)."
+
+  - name: mart_campaign_cohort_churn
+    description: >
+      One row per marketing campaign. Includes 90-day churn rate, CAC,
+      and average org MRR. Campaign 310000017 is the bad-fit benchmark (story #14).
+    columns:
+      - name: campaign_id
+        tests: [unique, not_null]
+      - name: churn_rate_90d
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+      - name: is_bad_fit_campaign
+        description: "True for campaign id=310000017 — the high-churn cohort anchor."
+
+  - name: mart_chargeback_rate_by_industry_month
+    description: >
+      Monthly chargeback rate by industry. The Subscription Box industry ramps
+      from 0.4% to 2.2% between Jan 2025 and May 2026 (story #3).
+    columns:
+      - name: chargeback_rate
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 0.1   # CB rates above 10% are data quality issues
+      - name: is_subscription_box
+        description: "Flags the Subscription Box / DTC Recurring industry (story #3)."
+
+  - name: mart_card_interchange_by_processor_month
+    description: >
+      Monthly card interchange COGS and volume by processor and MCC category.
+      helios_volume_share is the primary story #10 metric — it rises post-2025-06.
+    columns:
+      - name: helios_volume_share
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+
+  - name: mart_activation_funnel
+    description: >
+      One row per org. Reconstructs the full registration → first completed
+      payment funnel. The two primary drop-offs are legal_details (~62% pass)
+      and payment method addition (~52% within 14 days). Excludes orgs created
+      in the last 30 days (immature cohort).
+    columns:
+      - name: org_id
+        tests: [unique, not_null]
+      - name: legal_details_attempts
+        description: "Number of KYC attempts at the legal_details step."
+      - name: had_legal_details_retry
+        description: "True if the org needed more than one attempt at legal_details."
+      - name: completed_first_payment
+        description: "Primary activation metric — TRUE = org is activated."
+
+  - name: mart_support_tickets_by_feature_week
+    description: >
+      Weekly ticket volume aggregated by feature area, category, and priority.
+      in_spike_window flags the Aug 15-25 2025 OCR regression window (story #8).
+    columns:
+      - name: in_spike_window
+        description: "True for the week containing the v4.18 OCR support spike."
+      - name: linked_to_v418
+        description: "Count of tickets directly linked to release 520000018."
