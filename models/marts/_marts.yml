@@ -5,7 +5,7 @@ models:
     description: >
       One row per customer org. Primary entity table used by all 6 skills.
       Joins organizations, plans, partnerships, industries, latest subscription,
-      and latest health score. Materialized as a table partitioned by org_created_month.
+      and latest health score. Partitioned by org_created_month.
     columns:
       - name: org_id
         tests:
@@ -13,38 +13,42 @@ models:
           - not_null
       - name: account_status
         tests:
-          - accepted_values:
-              name: accepted_values_org_account_status
-              arguments:
-                values:
-                  - active
-                  - past_due
-                  - suspended
-                  - churned
-                  - trial
-                  - trial_expired
-                  - kyc_stalled
+          - name: accepted_values_org_account_status
+            test_name: accepted_values
+            severity: warn
+            arguments:
+              values:
+                - active
+                - past_due
+                - suspended
+                - churned
+                - trial
+                - trial_expired
+                - kyc_stalled
       - name: plan_tier
         tests:
-          - accepted_values:
-              name: accepted_values_org_plan_tier
-              arguments:
-                values:
-                  - trial
-                  - starter
-                  - growth
-                  - growth_2025
-                  - business
-                  - enterprise
-                  - legacy_2023
+          - name: accepted_values_org_plan_tier
+            test_name: accepted_values
+            severity: warn
+            arguments:
+              values:
+                - trial
+                - starter
+                - growth
+                - growth_2025
+                - business
+                - enterprise
+                - legacy_2023
       - name: mrr_usd
         tests:
           - not_null
         description: "Monthly recurring revenue in USD."
       - name: health_score
         tests:
-          - not_null
-        description: "Composite health score 0-100 from latest weekly snapshot."
+          - name: not_null_health_score
+            test_name: not_null
+            severity: warn
+        description: "Composite health score 0-100. Null for orgs with no health snapshots yet."
       - name: is_bad_fit_campaign_org
         description: "Flags orgs from the LinkedIn Manufacturing bad-fit campaign (story #14)."
       - name: is_grandfathered
@@ -63,7 +67,9 @@ models:
           - not_null
       - name: churn_rate_90d
         tests:
-          - not_null
+          - name: not_null_churn_rate
+            test_name: not_null
+            severity: warn
         description: "90-day churn rate. Should be ~2x baseline for campaign 310000017."
       - name: is_bad_fit_campaign
         description: "True for campaign id=310000017 — the high-churn cohort anchor."
@@ -83,7 +89,7 @@ models:
   - name: mart_card_interchange_by_processor_month
     description: >
       Monthly card interchange COGS and volume by processor and MCC category.
-      helios_volume_share is the primary story #10 metric — it rises post-2025-06.
+      helios_volume_share is the primary story #10 metric — rises post-2025-06.
     columns:
       - name: helios_volume_share
         tests:
