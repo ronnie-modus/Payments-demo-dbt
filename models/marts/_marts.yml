@@ -59,6 +59,56 @@ models:
       - name: is_sleeping
         description: "True when primary_risk_signal = 'sleeping' on latest health score (story #15)."
 
+    semantic_models:
+      - name: organizations
+        description: "Customer organizations — one row per account."
+        defaults:
+          agg_time_dimension: org_created_month
+        entities:
+          - name: org
+            type: primary
+            expr: org_id
+        dimensions:
+          - name: org_created_month
+            type: time
+            type_params:
+              time_granularity: month
+          - name: account_status
+            type: categorical
+          - name: plan_tier
+            type: categorical
+          - name: partner_short_code
+            type: categorical
+          - name: industry_name
+            type: categorical
+          - name: health_band
+            type: categorical
+          - name: is_churned
+            type: categorical
+          - name: is_sleeping
+            type: categorical
+          - name: is_bad_fit_campaign_org
+            type: categorical
+        measures:
+          - name: org_count
+            agg: count
+            expr: org_id
+          - name: total_mrr
+            agg: sum
+            expr: mrr_usd
+          - name: total_arr
+            agg: sum
+            expr: arr_usd
+          - name: avg_mrr
+            agg: average
+            expr: mrr_usd
+          - name: avg_health_score
+            agg: average
+            expr: health_score
+          - name: avg_churn_risk
+            agg: average
+            expr: churn_risk_score
+
   - name: mart_campaign_cohort_churn
     description: >
       One row per marketing campaign. Includes 90-day churn rate, CAC,
@@ -78,6 +128,47 @@ models:
       - name: is_bad_fit_campaign
         description: "True for campaign id=310000017 — the high-churn cohort anchor."
 
+    semantic_models:
+      - name: campaigns
+        description: "Marketing campaigns with cohort churn metrics."
+        defaults:
+          agg_time_dimension: campaign_start_date
+        entities:
+          - name: campaign
+            type: primary
+            expr: campaign_id
+        dimensions:
+          - name: campaign_start_date
+            type: time
+            type_params:
+              time_granularity: day
+            expr: campaign_start_date
+          - name: channel
+            type: categorical
+          - name: campaign_type
+            type: categorical
+          - name: is_bad_fit_campaign
+            type: categorical
+        measures:
+          - name: campaign_count
+            agg: count
+            expr: campaign_id
+          - name: total_spend
+            agg: sum
+            expr: spend_usd
+          - name: total_attributed_orgs
+            agg: sum
+            expr: attributed_orgs
+          - name: total_churned_within_90d
+            agg: sum
+            expr: churned_within_90d
+          - name: avg_churn_rate_90d
+            agg: average
+            expr: churn_rate_90d
+          - name: avg_cac
+            agg: average
+            expr: cac_usd
+
   - name: mart_chargeback_rate_by_industry_month
     description: >
       Monthly chargeback rate by industry. The Subscription Box industry ramps
@@ -89,6 +180,40 @@ models:
         description: "CB rate = chargebacks / approved sales."
       - name: is_subscription_box
         description: "Flags the Subscription Box / DTC Recurring industry (story #3)."
+
+    semantic_models:
+      - name: chargebacks
+        description: "Monthly chargeback rates by industry."
+        defaults:
+          agg_time_dimension: txn_month
+        entities:
+          - name: industry_month
+            type: primary
+            expr: "CONCAT(industry_name, '_', CAST(txn_month AS STRING))"
+        dimensions:
+          - name: txn_month
+            type: time
+            type_params:
+              time_granularity: month
+          - name: industry_name
+            type: categorical
+          - name: sector
+            type: categorical
+          - name: is_subscription_box
+            type: categorical
+        measures:
+          - name: total_approved_sales
+            agg: sum
+            expr: approved_sale_count
+          - name: total_chargebacks
+            agg: sum
+            expr: chargeback_count
+          - name: total_lost_amount
+            agg: sum
+            expr: lost_amount_usd
+          - name: avg_chargeback_rate
+            agg: average
+            expr: chargeback_rate
 
   - name: mart_card_interchange_by_processor_month
     description: >
@@ -103,6 +228,45 @@ models:
         tests:
           - not_null
         description: "Average interchange rate in basis points."
+
+    semantic_models:
+      - name: card_interchange
+        description: "Monthly card interchange costs and volume by processor."
+        defaults:
+          agg_time_dimension: txn_month
+        entities:
+          - name: processor_month
+            type: primary
+            expr: "CONCAT(processor_name, '_', CAST(txn_month AS STRING))"
+        dimensions:
+          - name: txn_month
+            type: time
+            type_params:
+              time_granularity: month
+          - name: processor_name
+            type: categorical
+          - name: mcc_category
+            type: categorical
+          - name: plan_tier
+            type: categorical
+          - name: partner_short_code
+            type: categorical
+        measures:
+          - name: total_txn_count
+            agg: sum
+            expr: txn_count
+          - name: total_volume
+            agg: sum
+            expr: volume_usd
+          - name: total_interchange_cost
+            agg: sum
+            expr: total_interchange_usd
+          - name: avg_interchange_bps
+            agg: average
+            expr: avg_interchange_bps
+          - name: avg_helios_volume_share
+            agg: average
+            expr: helios_volume_share
 
   - name: mart_activation_funnel
     description: >
@@ -129,3 +293,174 @@ models:
         description: "True for the week containing the v4.18 OCR support spike."
       - name: linked_to_v418
         description: "Count of tickets directly linked to release 520000018."
+
+    semantic_models:
+      - name: support_tickets
+        description: "Weekly support ticket volume by feature area."
+        defaults:
+          agg_time_dimension: ticket_week
+        entities:
+          - name: feature_week
+            type: primary
+            expr: "CONCAT(feature_area, '_', CAST(ticket_week AS STRING))"
+        dimensions:
+          - name: ticket_week
+            type: time
+            type_params:
+              time_granularity: week
+          - name: feature_area
+            type: categorical
+          - name: category
+            type: categorical
+          - name: priority
+            type: categorical
+          - name: channel
+            type: categorical
+          - name: in_spike_window
+            type: categorical
+        measures:
+          - name: total_tickets
+            agg: sum
+            expr: ticket_count
+          - name: total_resolved
+            agg: sum
+            expr: resolved_count
+          - name: total_sla_breached
+            agg: sum
+            expr: sla_breached_count
+          - name: avg_hours_to_resolve
+            agg: average
+            expr: avg_hours_to_resolve
+          - name: avg_csat
+            agg: average
+            expr: avg_csat
+
+metrics:
+
+  - name: total_mrr
+    label: "Total MRR"
+    type: simple
+    type_params:
+      measure:
+        name: total_mrr
+        fill_nulls_with: 0
+
+  - name: total_arr
+    label: "Total ARR"
+    type: simple
+    type_params:
+      measure:
+        name: total_arr
+        fill_nulls_with: 0
+
+  - name: org_count
+    label: "Organization Count"
+    type: simple
+    type_params:
+      measure:
+        name: org_count
+        fill_nulls_with: 0
+
+  - name: avg_mrr_per_org
+    label: "Avg MRR per Org"
+    type: simple
+    type_params:
+      measure:
+        name: avg_mrr
+
+  - name: avg_health_score
+    label: "Avg Health Score"
+    type: simple
+    type_params:
+      measure:
+        name: avg_health_score
+
+  - name: avg_churn_risk
+    label: "Avg Churn Risk"
+    type: simple
+    type_params:
+      measure:
+        name: avg_churn_risk
+
+  - name: total_campaign_spend
+    label: "Total Campaign Spend"
+    type: simple
+    type_params:
+      measure:
+        name: total_spend
+        fill_nulls_with: 0
+
+  - name: avg_cac
+    label: "Avg Customer Acquisition Cost"
+    type: simple
+    type_params:
+      measure:
+        name: avg_cac
+
+  - name: avg_churn_rate_90d
+    label: "Avg 90-Day Churn Rate"
+    type: simple
+    type_params:
+      measure:
+        name: avg_churn_rate_90d
+
+  - name: avg_chargeback_rate
+    label: "Avg Chargeback Rate"
+    type: simple
+    type_params:
+      measure:
+        name: avg_chargeback_rate
+
+  - name: total_chargeback_losses
+    label: "Total Chargeback Losses"
+    type: simple
+    type_params:
+      measure:
+        name: total_lost_amount
+        fill_nulls_with: 0
+
+  - name: total_card_volume
+    label: "Total Card Volume"
+    type: simple
+    type_params:
+      measure:
+        name: total_volume
+        fill_nulls_with: 0
+
+  - name: total_interchange_cost
+    label: "Total Interchange Cost"
+    type: simple
+    type_params:
+      measure:
+        name: total_interchange_cost
+        fill_nulls_with: 0
+
+  - name: avg_helios_volume_share
+    label: "Avg Helios Volume Share"
+    type: simple
+    type_params:
+      measure:
+        name: avg_helios_volume_share
+
+  - name: total_support_tickets
+    label: "Total Support Tickets"
+    type: simple
+    type_params:
+      measure:
+        name: total_tickets
+        fill_nulls_with: 0
+
+  - name: sla_breach_count
+    label: "SLA Breach Count"
+    type: simple
+    type_params:
+      measure:
+        name: total_sla_breached
+        fill_nulls_with: 0
+
+  - name: avg_hours_to_resolve
+    label: "Avg Hours to Resolve"
+    type: simple
+    type_params:
+      measure:
+        name: avg_hours_to_resolve
