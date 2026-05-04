@@ -60,7 +60,7 @@ select
     o.account_status,
     o.signup_source,
     o.city,
-    o.state,
+    o.state_or_region,
     o.default_currency_code,
     o.nps_score_latest,
     o.churn_reason,
