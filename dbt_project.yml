@@ -1,0 +1,46 @@
+name: payments_demo
+version: "1.0.0"
+config-version: 2
+
+profile: payments_demo
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  bq_project: "modus-playground"
+  bq_dataset: "payments_demo"
+  # Story anchor IDs — referenced in models and tests
+  bad_fit_campaign_id: 310000017
+  release_v418_id: 520000018
+
+models:
+  payments_demo:
+    staging:
+      +schema: staging
+      +materialized: view
+      +tags: ["staging"]
+    intermediate:
+      +schema: intermediate
+      +materialized: ephemeral
+      +tags: ["intermediate"]
+    marts:
+      +schema: marts
+      +materialized: table
+      +tags: ["mart"]
+      acquisition:
+        +tags: ["mart", "acquisition"]
+      payments:
+        +tags: ["mart", "payments"]
+      risk:
+        +tags: ["mart", "risk"]
+      finance:
+        +tags: ["mart", "finance"]
+      product:
+        +tags: ["mart", "product"]
+      activation:
+        +tags: ["mart", "activation"]

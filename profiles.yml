@@ -1,0 +1,35 @@
+payments_demo:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth                  # use service-account for CI/CD
+      project: modus-playground
+      dataset: payments_demo_dev     # personal dev dataset — keeps prod clean
+      location: US
+      threads: 4
+      timeout_seconds: 300
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: modus-playground
+      dataset: payments_demo_dbt     # prod dbt output dataset
+      keyfile: "{{ env_var('BIGQUERY_KEYFILE') }}"
+      location: US
+      threads: 8
+      timeout_seconds: 600
+
+# ── dbt Cloud setup (no profiles.yml needed) ────────────────────────
+# 1. In dbt Cloud: Account Settings → Connections → New Connection
+#    Type: BigQuery
+#    Project ID: modus-playground
+#    Auth method: Service Account JSON (paste the key)
+#    Dataset: payments_demo_dbt
+#    Location: US
+# 2. Create environments: Development and Production
+#    Dev dataset:  payments_demo_dev
+#    Prod dataset: payments_demo_dbt
+# 3. Create jobs:
+#    - Daily full run:  dbt build --target prod  (schedule: 6:00 AM)
+#    - Slim CI:         dbt build --select state:modified+  (on PR)
