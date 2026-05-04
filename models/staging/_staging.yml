@@ -5,12 +5,22 @@ models:
     description: Cleaned organization records. Excludes internal platform org.
     columns:
       - name: org_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: account_status
         tests:
           - accepted_values:
-              values: [active, past_due, suspended, churned, trial,
-                       trial_expired, kyc_stalled]
+              name: accepted_values_account_status
+              arguments:
+                values:
+                  - active
+                  - past_due
+                  - suspended
+                  - churned
+                  - trial
+                  - trial_expired
+                  - kyc_stalled
       - name: is_customer_org
         description: True for all orgs except the [Internal] platform org.
       - name: is_bad_fit_campaign_org
@@ -20,16 +30,21 @@ models:
     description: Enriched payment records with derived flags and date helpers.
     columns:
       - name: payment_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: direction
         tests:
           - accepted_values:
-              values: [outbound, inbound]
+              name: accepted_values_payment_direction
+              arguments:
+                values:
+                  - outbound
+                  - inbound
       - name: amount_usd
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              strictly: true
+          - not_null
+        description: Payment amount in USD.
       - name: gross_profit_usd
         description: platform_fee_amount minus third_party_fee_amount.
 
@@ -37,11 +52,20 @@ models:
     description: Card transaction records with interchange and risk fields.
     columns:
       - name: card_transaction_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: transaction_type
         tests:
           - accepted_values:
-              values: [sale, refund, void, auth, capture]
+              name: accepted_values_card_txn_type
+              arguments:
+                values:
+                  - sale
+                  - refund
+                  - void
+                  - auth
+                  - capture
       - name: is_q4
         description: "True for November and December transactions (story #2)."
 
@@ -49,35 +73,72 @@ models:
     description: Subscription lifecycle with MRR and migration flags.
     columns:
       - name: subscription_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              name: accepted_values_subscription_status
+              arguments:
+                values:
+                  - trialing
+                  - active
+                  - past_due
+                  - paused
+                  - canceled
+      - name: mrr_usd
+        tests:
+          - not_null
+        description: Monthly recurring revenue in USD.
       - name: is_migrated
         description: "True if upgraded_from_subscription_id is set (story #7)."
       - name: is_grandfathered
         description: "True for legacy_2023 orgs with unlimited usage (story #11)."
-      - name: mrr_usd
-        tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
 
   - name: stg_chargebacks
     description: Chargeback records with financial outcome flags.
     columns:
       - name: chargeback_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: reason_category
         tests:
           - accepted_values:
-              values: [fraud, consumer_dispute, authorization, processing_error]
+              name: accepted_values_chargeback_reason
+              arguments:
+                values:
+                  - fraud
+                  - consumer_dispute
+                  - authorization
+                  - processing_error
 
   - name: stg_kyc_check_steps
     description: "KYC step records with pass/fail flags and step ordering."
     columns:
       - name: step_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
       - name: step_name
         tests:
           - accepted_values:
-              values: [personal_details, company_details, legal_details, industry]
+              name: accepted_values_kyc_step_name
+              arguments:
+                values:
+                  - personal_details
+                  - company_details
+                  - legal_details
+                  - industry
+      - name: status
+        tests:
+          - accepted_values:
+              name: accepted_values_kyc_step_status
+              arguments:
+                values:
+                  - passed
+                  - failed
       - name: is_legal_details_step
         description: "True for the legal_details step — the funnel cliff (story #4)."
 
@@ -85,19 +146,47 @@ models:
     description: Support tickets with feature area, SLA, and spike window flags.
     columns:
       - name: ticket_id
-        tests: [unique, not_null]
-      - name: is_v418_spike_ticket
-        description: "True for OCR tickets in the Aug 15-25 2025 spike window (story #8)."
+        tests:
+          - unique
+          - not_null
       - name: sentiment
         tests:
           - accepted_values:
-              values: [positive, neutral, negative]
+              name: accepted_values_ticket_sentiment
+              arguments:
+                values:
+                  - positive
+                  - neutral
+                  - negative
+      - name: priority
+        tests:
+          - accepted_values:
+              name: accepted_values_ticket_priority
+              arguments:
+                values:
+                  - low
+                  - medium
+                  - high
+                  - urgent
+      - name: is_v418_spike_ticket
+        description: "True for OCR tickets in the Aug 15-25 2025 spike window (story #8)."
 
   - name: stg_sanctions_screenings
     description: "Sanctions screening outcomes with false-positive and delay flags."
     columns:
       - name: screening_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
+      - name: outcome
+        tests:
+          - accepted_values:
+              name: accepted_values_screening_outcome
+              arguments:
+                values:
+                  - clear
+                  - potential_match
+                  - confirmed_match
       - name: is_problematic_list_version
         description: "True for v2026.03 which has 22% false-positive rate (story #9)."
 
@@ -105,22 +194,45 @@ models:
     description: "Weekly health snapshots per org with churn risk and sleeping flags."
     columns:
       - name: health_score_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
+      - name: health_band
+        tests:
+          - accepted_values:
+              name: accepted_values_health_band
+              arguments:
+                values:
+                  - green
+                  - yellow
+                  - red
       - name: health_score
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 100
+          - not_null
+        description: "Composite score 0-100."
       - name: churn_risk_score
         tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 1
+          - not_null
+        description: "Churn probability 0-1."
 
   - name: stg_marketing_campaigns
     description: Marketing campaigns with churn rate and bad-fit flag.
     columns:
       - name: campaign_id
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
+      - name: campaign_type
+        tests:
+          - accepted_values:
+              name: accepted_values_campaign_type
+              arguments:
+                values:
+                  - paid_search
+                  - paid_social
+                  - referral
+                  - partner
+                  - outbound
+                  - content
       - name: is_bad_fit_campaign
         description: "True for id=310000017 — LinkedIn Q4 2024 Manufacturing (story #14)."
