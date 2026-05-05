@@ -392,7 +392,7 @@ models:
         agg: average
         expr: avg_csat
 
-  - name: time_spine_daily
+  - name: metricflow_time_spine
     description: "Daily time spine required by MetricFlow."
     time_spine:
       standard_granularity_column: date_day
