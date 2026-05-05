@@ -8,3 +8,4 @@ models:
     columns:
       - name: date_day
         description: "One row per calendar day from 2020-01-01 to current date."
+        granularity: day
